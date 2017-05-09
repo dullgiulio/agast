@@ -4,55 +4,77 @@ import (
 	"bytes"
 )
 
+type highlight struct {
+	off int
+	n   int
+}
+
 type result struct {
 	line string
 	num  int
+	hi   []highlight
 }
 
 type data struct {
-	data []byte
-	off  int
+	data  []byte
+	nline int
+	off   int
 }
 
-func (d *data) findWord(ws []string, wn int, nline int) ([]result, bool) {
+func (d *data) findWord(ws []string, wn int) ([]result, []highlight) {
 	if wn >= len(ws) || d.off >= len(d.data) {
-		return make([]result, 0, len(ws)), false
+		return make([]result, 0, len(ws)), nil
 	}
-	var sameline bool
 	pos := bytes.Index(d.data[d.off:], []byte(ws[wn]))
 	if pos < 0 {
-		return nil, false
+		return nil, nil
 	}
+	var sameline bool
 	pos = pos + d.off
+	if d.nline < 0 {
+		d.nline = bytesBefore(d.data, pos, '\n')
+	} else {
+		newlines := bytesBefore(d.data[d.off:], pos-d.off, '\n')
+		d.nline = d.nline + newlines
+		if newlines == 0 {
+			sameline = true
+		}
+	}
+
+	// TODO: extract line only if not sameline
 	lineStart := byteBefore(d.data, pos, '\n')
 	lineEnd := byteAfter(d.data, pos, '\n')
 	// note: line needs to be copied from the mmap memory, as it will be
 	//       freed before being printed
 	line := string(d.data[lineStart:lineEnd])
-	if nline < 0 {
-		nline = bytesBefore(d.data, pos, '\n')
-	} else {
-		newlines := bytesBefore(d.data[d.off:], pos-d.off, '\n')
-		nline = nline + newlines
-		if newlines == 0 {
-			sameline = true
-		}
-	}
+
 	d.off = pos + len(ws[wn])
-	res, smline := d.findWord(ws, wn+1, nline)
-	if !smline {
-		if res == nil {
-			return nil, false
-		}
-		res = append(res, result{line, nline})
+	// Returns results in other lines or nil and the highlights in the same line
+	res, his := d.findWord(ws, wn+1)
+	// Next word didn't match, unwind stack dropping partial results
+	if res == nil && his == nil {
+		return nil, nil
 	}
-	return res, sameline
+	hi := highlight{pos - lineStart, len(ws[wn])}
+	if sameline {
+		his = append([]highlight{hi}, his...)
+		return res, his
+	}
+	if his == nil {
+		his = []highlight{hi}
+	} else {
+		his = append([]highlight{hi}, his...)
+	}
+	r := result{line, d.nline, his}
+	res = append(res, r)
+	return res, nil
 }
 
 func (d *data) findWords(ws []string) []result {
 	var res []result
+	d.nline = -1
 	for {
-		rs, _ := d.findWord(ws, 0, -1)
+		rs, _ := d.findWord(ws, 0)
 		if rs == nil {
 			break
 		}
@@ -63,6 +85,7 @@ func (d *data) findWords(ws []string) []result {
 		if res == nil {
 			res = rs
 		} else {
+			// TODO: Skip one result if on the same line as the last known
 			res = append(res, rs...)
 		}
 	}

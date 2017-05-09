@@ -81,16 +81,29 @@ func (p *proc) wait() {
 
 // Run only one
 func (p *proc) resulter() {
+	var printed bool
 	for f := range p.results {
 		if f.err != nil {
 			log.Printf("error: %s: %s", f.fname, f.err)
 			continue
 		}
-		fmt.Printf("%s:\n", f.fname)
-		for r := range f.res {
-			fmt.Printf("%d: %s\n", f.res[r].num, f.res[r].line)
+		if printed {
+			fmt.Print("\n")
 		}
-		fmt.Print("\n")
+		printed = true
+		fmt.Printf("\033[35m%s\033[0m\n", f.fname)
+		for r := range f.res {
+			fmt.Printf("\033[32m%d\033[0m: ", f.res[r].num)
+			line := f.res[r].line
+			n := 0
+			for _, hi := range f.res[r].hi {
+				fmt.Print(line[n:hi.off])
+				n = hi.off + hi.n
+				fmt.Printf("\033[91m%s\033[0m", line[hi.off:n])
+			}
+			fmt.Print(line[n:])
+			fmt.Print("\n")
+		}
 	}
 	p.done <- struct{}{}
 }
