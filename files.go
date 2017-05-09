@@ -24,14 +24,14 @@ type file struct {
 	fi    os.FileInfo
 	fname string
 	err   error
-	res   []result
+	res   []resultGroup
 }
 
 func newFile(fname string, fi os.FileInfo) *file {
 	return &file{fname: fname, fi: fi}
 }
 
-func (f *file) match(words []string) bool {
+func (f *file) match(words [][]byte) bool {
 	fh, err := os.Open(f.fname)
 	if err != nil {
 		f.err = fmt.Errorf("cannot open: %s", err)
@@ -50,7 +50,7 @@ func (f *file) match(words []string) bool {
 }
 
 type proc struct {
-	words   []string
+	words   [][]byte
 	types   ftypes
 	results chan *file
 	process chan *file
@@ -59,8 +59,12 @@ type proc struct {
 }
 
 func newProc(nproc int, ts ftypes, words []string) *proc {
+	ws := make([][]byte, len(words))
+	for i := range words {
+		ws[i] = []byte(words[i])
+	}
 	p := &proc{
-		words:   words,
+		words:   ws,
 		types:   ts,
 		done:    make(chan struct{}),
 		results: make(chan *file), // Not buffered to give results ASAP
@@ -93,16 +97,21 @@ func (p *proc) resulter() {
 		printed = true
 		fmt.Printf("\033[35m%s\033[0m\n", f.fname)
 		for r := range f.res {
-			fmt.Printf("\033[32m%d\033[0m: ", f.res[r].num)
-			line := f.res[r].line
-			n := 0
-			for _, hi := range f.res[r].hi {
-				fmt.Print(line[n:hi.off])
-				n = hi.off + hi.n
-				fmt.Printf("\033[91m%s\033[0m", line[hi.off:n])
+			for g := range f.res[r] {
+				fmt.Printf("\033[32m%d\033[0m: ", f.res[r][g].num+1)
+				line := f.res[r][g].line
+				n := 0
+				for _, hi := range f.res[r][g].hi {
+					fmt.Print(line[n:hi.off])
+					n = hi.off + hi.n
+					fmt.Printf("\033[91m%s\033[0m", line[hi.off:n])
+				}
+				fmt.Print(line[n:])
+				fmt.Print("\n")
 			}
-			fmt.Print(line[n:])
-			fmt.Print("\n")
+			if r < len(f.res)-1 {
+				fmt.Printf("--\n")
+			}
 		}
 	}
 	p.done <- struct{}{}

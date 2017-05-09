@@ -16,7 +16,8 @@ const data0 = `00 Hello
 
 func TestMatchWords(t *testing.T) {
 	d := data{data: []byte(data0)}
-	words := []string{"Hello", "how", "life", "going"}
+	words := [][]byte{[]byte("Hello"), []byte("how"), []byte("life"), []byte("going")}
 	res := d.findWords(words)
 	fmt.Printf("%s\n%+v\n%+v\n", data0, words, res)
+	// TODO: finish this test
 }
