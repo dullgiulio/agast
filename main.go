@@ -29,7 +29,7 @@ func main() {
 	if dir == "" {
 		log.Fatal("You need to specify a directory")
 	}
-	p := newProc(nproc, ftypes([]string{".go", ".php"}), words)
+	p := newProc(nproc, ftypes([]string{".go", ".php", ".js", ".css", ".html"}), words)
 	go p.resulter()
 	if err := p.run(dir); err != nil {
 		log.Printf("error: %s", err)

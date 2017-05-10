@@ -83,12 +83,14 @@ func (p *proc) wait() {
 	<-p.done
 }
 
-func ellips(line string, n int) string {
+// TODO: ellyps and colours should be based on configurable interfaces
+
+func (p *proc) ellips(line string, n int) string {
 	if len(line) <= n {
 		return line
 	}
 	n = (n - 3) / 2
-	return fmt.Sprintf("%s...%s", line[:n], line[n:])
+	return fmt.Sprintf("%s\033[1;34m...\033[0m%s", line[:n], line[len(line)-n:])
 }
 
 // Run only one
@@ -110,11 +112,11 @@ func (p *proc) resulter() {
 				line := f.res[r][g].line
 				n := 0
 				for _, hi := range f.res[r][g].hi {
-					fmt.Print(ellips(line[n:hi.off], 50))
+					fmt.Print(p.ellips(line[n:hi.off], 160))
 					n = hi.off + hi.n
 					fmt.Printf("\033[91m%s\033[0m", line[hi.off:n])
 				}
-				fmt.Print(ellips(line[n:], 50))
+				fmt.Print(p.ellips(line[n:], 160))
 				fmt.Print("\n")
 			}
 			if r < len(f.res)-1 {
