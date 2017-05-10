@@ -24,14 +24,14 @@ type data struct {
 	off   int
 }
 
-func (d *data) highlights(line []byte, start int, his []highlight, wn int) []highlight {
+func (d *data) highlights(line []byte, base int, his []highlight, wn int) []highlight {
 	for wn = wn + 1; wn < len(d.words); wn++ {
-		pos := bytes.Index(line[start:], d.words[wn])
+		pos := bytes.Index(line[base:], d.words[wn])
 		if pos < 0 {
 			break
 		}
-		his = append(his, highlight{pos + start, len(d.words[wn])})
-		start = pos + len(d.words[wn])
+		his = append(his, highlight{pos + base, len(d.words[wn])})
+		base = base + pos + len(d.words[wn])
 	}
 	return his
 }
@@ -57,7 +57,7 @@ func (d *data) findWord(wn int) []result {
 	nline := d.nline
 	lineEnd := byteAfter(d.data, pos, '\n')
 	line := d.data[lineStart:lineEnd]
-	start := pos-lineStart
+	start := pos - lineStart
 	his := []highlight{
 		highlight{start, len(d.words[wn])},
 	}
@@ -67,7 +67,7 @@ func (d *data) findWord(wn int) []result {
 	d.off = lineEnd
 
 	// Returns results in other lines or nil and the highlights in the same line
-	res := d.findWord(wn+len(his))
+	res := d.findWord(wn + len(his))
 	// Next word didn't match, unwind stack dropping partial results
 	if res == nil {
 		return nil
@@ -101,7 +101,7 @@ func bytesBefore(data []byte, off int, c byte) (int, int) {
 	for i := 0; i <= off; i++ {
 		if data[i] == c {
 			cnt++
-			last = i+1
+			last = i + 1
 		}
 	}
 	return cnt, last
