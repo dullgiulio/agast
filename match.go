@@ -84,7 +84,7 @@ func (d *data) findWords(ws [][]byte) []resultGroup {
 	d.nline = -1
 	for {
 		rs := d.findWord(0)
-		if rs == nil {
+		if len(rs) == 0 {
 			break
 		}
 		// Results are returned inverted because of recursive stacking
