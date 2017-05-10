@@ -83,6 +83,14 @@ func (p *proc) wait() {
 	<-p.done
 }
 
+func ellips(line string, n int) string {
+	if len(line) <= n {
+		return line
+	}
+	n = (n - 3) / 2
+	return fmt.Sprintf("%s...%s", line[:n], line[n:])
+}
+
 // Run only one
 func (p *proc) resulter() {
 	var printed bool
@@ -102,11 +110,11 @@ func (p *proc) resulter() {
 				line := f.res[r][g].line
 				n := 0
 				for _, hi := range f.res[r][g].hi {
-					fmt.Print(line[n:hi.off])
+					fmt.Print(ellips(line[n:hi.off], 50))
 					n = hi.off + hi.n
 					fmt.Printf("\033[91m%s\033[0m", line[hi.off:n])
 				}
-				fmt.Print(line[n:])
+				fmt.Print(ellips(line[n:], 50))
 				fmt.Print("\n")
 			}
 			if r < len(f.res)-1 {
