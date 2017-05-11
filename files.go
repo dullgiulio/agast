@@ -51,25 +51,29 @@ func (f *file) match(words [][]byte) bool {
 
 type proc struct {
 	words   [][]byte
+	dots    string
 	types   ftypes
+	cl      colorizer
 	results chan *file
 	process chan *file
 	done    chan struct{}
 	wg      sync.WaitGroup
 }
 
-func newProc(nproc int, ts ftypes, words []string) *proc {
+func newProc(nproc int, ts ftypes, cl colorizer, words []string) *proc {
 	ws := make([][]byte, len(words))
 	for i := range words {
 		ws[i] = []byte(words[i])
 	}
 	p := &proc{
+		cl:      cl,
 		words:   ws,
 		types:   ts,
 		done:    make(chan struct{}),
 		results: make(chan *file), // Not buffered to give results ASAP
 		process: make(chan *file, 2048),
 	}
+	p.dots = p.cl.colorize(hiEllipsis, "...") // do it once and for all
 	p.wg.Add(nproc)
 	for i := 0; i < nproc; i++ {
 		go p.processor()
@@ -83,14 +87,12 @@ func (p *proc) wait() {
 	<-p.done
 }
 
-// TODO: ellyps and colours should be based on configurable interfaces
-
 func (p *proc) ellips(line string, n int) string {
 	if len(line) <= n {
 		return line
 	}
 	n = (n - 3) / 2
-	return fmt.Sprintf("%s\033[1;34m...\033[0m%s", line[:n], line[len(line)-n:])
+	return fmt.Sprintf("%s%s%s", line[:n], p.dots, line[len(line)-n:])
 }
 
 // Run only one
@@ -105,22 +107,22 @@ func (p *proc) resulter() {
 			fmt.Print("\n")
 		}
 		printed = true
-		fmt.Printf("\033[35m%s\033[0m\n", f.fname)
+		fmt.Println(p.cl.colorize(hiFilename, f.fname))
 		for r := range f.res {
 			for g := range f.res[r] {
-				fmt.Printf("\033[32m%d\033[0m: ", f.res[r][g].num+1)
+				fmt.Print(p.cl.colorizef(hiNumber, "%d", f.res[r][g].num+1), ": ")
 				line := f.res[r][g].line
 				n := 0
 				for _, hi := range f.res[r][g].hi {
 					fmt.Print(p.ellips(line[n:hi.off], 160))
 					n = hi.off + hi.n
-					fmt.Printf("\033[91m%s\033[0m", line[hi.off:n])
+					fmt.Print(p.cl.colorize(hiMatch, line[hi.off:n]))
 				}
 				fmt.Print(p.ellips(line[n:], 160))
 				fmt.Print("\n")
 			}
 			if r < len(f.res)-1 {
-				fmt.Printf("--\n")
+				fmt.Println("--")
 			}
 		}
 	}
