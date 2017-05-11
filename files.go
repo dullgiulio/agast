@@ -109,24 +109,32 @@ func (p *proc) resulter() {
 		printed = true
 		fmt.Println(p.cl.colorize(hiFilename, f.fname))
 		for r := range f.res {
-			for g := range f.res[r] {
-				fmt.Print(p.cl.colorizef(hiNumber, "%d", f.res[r][g].num+1), ": ")
-				line := f.res[r][g].line
-				n := 0
-				for _, hi := range f.res[r][g].hi {
-					fmt.Print(p.ellips(line[n:hi.off], 160))
-					n = hi.off + hi.n
-					fmt.Print(p.cl.colorize(hiMatch, line[hi.off:n]))
-				}
-				fmt.Print(p.ellips(line[n:], 160))
-				fmt.Print("\n")
-			}
-			if r < len(f.res)-1 {
-				fmt.Println("--")
-			}
+			last := r >= len(f.res)-1
+			// TODO: take a writer as param
+			p.printGroup(f.res[r], last)
 		}
 	}
 	p.done <- struct{}{}
+}
+
+func (p *proc) printLine(line string, his []highlight) {
+	var n int
+	for _, hi := range his {
+		fmt.Print(p.ellips(line[n:hi.off], 160))
+		n = hi.off + hi.n
+		fmt.Print(p.cl.colorize(hiMatch, line[hi.off:n]))
+	}
+	fmt.Println(p.ellips(line[n:], 160))
+}
+
+func (p *proc) printGroup(res []result, last bool) {
+	for i := range res {
+		fmt.Print(p.cl.colorizef(hiNumber, "%d", res[i].num+1), ": ")
+		p.printLine(res[i].line, res[i].hi)
+	}
+	if !last {
+		fmt.Println("--")
+	}
 }
 
 func (p *proc) processor() {

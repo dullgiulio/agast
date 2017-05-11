@@ -40,6 +40,8 @@ func (d *data) findWord(wn int) []result {
 	if wn >= len(d.words) || d.off >= len(d.data) {
 		return make([]result, 0, len(d.words))
 	}
+	// TODO: At the second word, try to find a closer first word. If found,
+	//       drop the first result.
 	pos := bytes.Index(d.data[d.off:], d.words[wn])
 	if pos < 0 {
 		return nil

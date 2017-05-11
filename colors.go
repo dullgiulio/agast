@@ -51,7 +51,7 @@ func (r rgcolors) colorize(he hielement, s string) string {
 	if he == hiNone {
 		return s
 	}
-	return r.code(he)+s+"\033[0m"
+	return r.code(he) + s + "\033[0m"
 }
 
 func (r rgcolors) colorizef(he hielement, frmt string, data ...interface{}) string {
