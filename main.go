@@ -19,7 +19,11 @@ func main() {
 	flag.Parse()
 	dir := "."
 	exts := ftypes([]string{".go", ".php", ".js", ".css", ".html"})
+
+	// TODO: move presentation to own object
+	maxline := 160   // display dots and shorten longer lines
 	cl := rgcolors{} // TODO: only if terminal supports it
+
 	words := flag.Args()
 	if flag.NArg() > 0 {
 		last := flag.Arg(flag.NArg() - 1)
@@ -31,7 +35,7 @@ func main() {
 	if dir == "" {
 		log.Fatal("You need to specify a directory")
 	}
-	p := newProc(nproc, exts, cl, words)
+	p := newProc(nproc, exts, cl, maxline, words)
 	go p.resulter()
 	if err := p.run(dir); err != nil {
 		log.Printf("error: %s", err)

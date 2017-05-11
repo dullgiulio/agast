@@ -51,6 +51,7 @@ func (f *file) match(words [][]byte) bool {
 
 type proc struct {
 	words   [][]byte
+	maxline int
 	dots    string
 	types   ftypes
 	cl      colorizer
@@ -60,7 +61,7 @@ type proc struct {
 	wg      sync.WaitGroup
 }
 
-func newProc(nproc int, ts ftypes, cl colorizer, words []string) *proc {
+func newProc(nproc int, ts ftypes, cl colorizer, maxline int, words []string) *proc {
 	ws := make([][]byte, len(words))
 	for i := range words {
 		ws[i] = []byte(words[i])
@@ -69,6 +70,7 @@ func newProc(nproc int, ts ftypes, cl colorizer, words []string) *proc {
 		cl:      cl,
 		words:   ws,
 		types:   ts,
+		maxline: maxline,
 		done:    make(chan struct{}),
 		results: make(chan *file), // Not buffered to give results ASAP
 		process: make(chan *file, 2048),
@@ -88,7 +90,7 @@ func (p *proc) wait() {
 }
 
 func (p *proc) ellips(line string, n int) string {
-	if len(line) <= n {
+	if n == 0 || len(line) <= n {
 		return line
 	}
 	n = (n - 3) / 2
@@ -120,11 +122,11 @@ func (p *proc) resulter() {
 func (p *proc) printLine(line string, his []highlight) {
 	var n int
 	for _, hi := range his {
-		fmt.Print(p.ellips(line[n:hi.off], 160))
+		fmt.Print(p.ellips(line[n:hi.off], p.maxline))
 		n = hi.off + hi.n
 		fmt.Print(p.cl.colorize(hiMatch, line[hi.off:n]))
 	}
-	fmt.Println(p.ellips(line[n:], 160))
+	fmt.Println(p.ellips(line[n:], p.maxline))
 }
 
 func (p *proc) printGroup(res []result, last bool) {
